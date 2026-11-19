@@ -117,7 +117,7 @@ if(difficulty===9){atNine+=dt;if(atNine>=35&&!shootersUnlocked){shootersUnlocked
 const goldSchedule=[12,35,65];while(goldDrops<goldSchedule.length&&elapsed>=goldSchedule[goldDrops]){items.push({x:rand(65,295),y:-40,type:'gold',logo:0,speed:110,phase:0,shoot:0});goldDrops++}
 spawn+=dt;let rate=Math.max(.29,.98-(difficulty-4)*.115);while(spawn>=rate){spawn-=rate;drop()}
 if(shootersUnlocked&&elapsed>=nextShooter){addShooter();nextShooter=elapsed+rand(5.5,8.5)}
-if(pressed.left)pX-=290*dt;if(pressed.right)pX+=290*dt;if(drag!==null)pX+=(drag-pX)*Math.min(1,dt*20);pX=clamp(pX,30,330);invuln=Math.max(0,invuln-dt);flashTimer=Math.max(0,flashTimer-dt);
+if(drag!==null){pX=clamp(drag,30,330)}else{if(pressed.left)pX-=290*dt;if(pressed.right)pX+=290*dt;pX=clamp(pX,30,330)}invuln=Math.max(0,invuln-dt);flashTimer=Math.max(0,flashTimer-dt);
 if(fireUntil>elapsed){fireClock+=dt;while(fireClock>=.2){fireClock-=.2;shots.push({x:pX,y:478,speed:490})}}else fireClock=0;
 ctx.clearRect(0,0,W,H);if(bg.complete&&bg.naturalWidth)ctx.drawImage(bg,0,0,W,H);else{ctx.fillStyle='#07559b';ctx.fillRect(0,0,W,H)}ctx.fillStyle='rgba(0,8,29,.43)';ctx.fillRect(0,0,W,H);ctx.fillStyle='rgba(0,0,0,.60)';ctx.fillRect(0,0,W,35);ctx.fillStyle='#fff';ctx.font='bold 12px REUP Arcade';ctx.textAlign='left';ctx.fillText('RE:UP MARKET · PENANG',10,22);
 for(let i=items.length-1;i>=0;i--){let a=items[i];a.y+=a.speed*dt;if(a.type==='shooter'){a.x+=Math.sin(elapsed*2+a.phase)*25*dt;a.shoot-=dt;if(a.shoot<=0&&a.y>30&&a.y<460){enemyShots.push({x:a.x,y:a.y+21,vx:clamp((pX-a.x)*.24,-48,48),vy:115+(difficulty-4)*6});a.shoot=rand(1.9,2.7)}}
@@ -142,7 +142,24 @@ function beginCountdown(){
   const tick=()=>{if(count===0){sound('go');o.innerHTML='<div class="count-number">GO!</div>';bootTimers.push(setTimeout(()=>{o.classList.add('hidden');start()},500));return}
     sound('count');o.innerHTML='<div class="count-number">'+count+'</div><p>GET READY!</p>';count--;bootTimers.push(setTimeout(tick,800))};tick();
 }
-function pointer(e){let rect=c.getBoundingClientRect();drag=(e.clientX-rect.left)*W/rect.width}c.addEventListener('pointerdown',e=>{pointer(e);c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(e.buttons)pointer(e)});c.addEventListener('pointerup',()=>drag=null);c.addEventListener('pointercancel',()=>drag=null);
+// Mobile drag: preserve initial finger-to-ferry offset, then track horizontally without smoothing lag.
+let activeDragPointer=null,dragOffset=0;
+function pointerX(e){const rect=c.getBoundingClientRect();return (e.clientX-rect.left)*W/rect.width}
+c.addEventListener('pointerdown',e=>{
+  if(!running||activeDragPointer!==null)return;
+  activeDragPointer=e.pointerId;
+  dragOffset=pX-pointerX(e); // no jump when the finger first touches the canvas
+  drag=pX;
+  c.setPointerCapture(e.pointerId);
+});
+c.addEventListener('pointermove',e=>{
+  if(e.pointerId!==activeDragPointer||drag===null)return;
+  drag=clamp(pointerX(e)+dragOffset,30,330);
+});
+function releaseDrag(e){if(e.pointerId!==activeDragPointer)return;activeDragPointer=null;drag=null;dragOffset=0}
+c.addEventListener('pointerup',releaseDrag);
+c.addEventListener('pointercancel',releaseDrag);
+c.addEventListener('lostpointercapture',releaseDrag);
 for(let dir of ['left','right']){let b=$(dir);b.addEventListener('pointerdown',e=>{e.preventDefault();pressed[dir]=true;b.setPointerCapture(e.pointerId)});for(let ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>pressed[dir]=false)}
 document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft'||e.key==='a')pressed.left=true;if(e.key==='ArrowRight'||e.key==='d')pressed.right=true});document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='a')pressed.left=false;if(e.key==='ArrowRight'||e.key==='d')pressed.right=false});hud();playBoot()})();
 </script></body></html>
