@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { seededRandom, validateInputLog, replayPrototype } from './replay-prototype.mjs';
+const session = { seed: 12345, totalTicks: 600, inputs: [{ tick: 0, direction: 'right' }, { tick: 150, direction: 'left' }, { tick: 350, direction: 'neutral' }] };
+assert.deepEqual(replayPrototype(session), replayPrototype(session), 'Replay must be deterministic');
+assert.notEqual(replayPrototype(session).checksum, replayPrototype({ ...session, seed: 12346 }).checksum, 'Seed must affect replay');
+assert.equal(replayPrototype(session).eligibleForLeaderboard, false);
+assert.equal(replayPrototype(session).verifiedScore, null);
+assert.throws(() => validateInputLog([{tick: 3,direction:'left'},{tick:3,direction:'right'}], 10));
+assert.throws(() => validateInputLog([{tick: 11,direction:'left'}], 10));
+assert.throws(() => validateInputLog([{tick: 0,direction:'teleport'}], 10));
+assert.throws(() => validateInputLog([], 0));
+assert.throws(() => replayPrototype({ ...session, seed: -1 }));
+assert.equal(seededRandom(1)(), seededRandom(1)());
+console.log('Replay prototype tests passed (not production anti-cheat certification)');
