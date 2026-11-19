@@ -59,8 +59,21 @@ const rand=(a,b)=>a+Math.random()*(b-a),clamp=(x,a,b)=>Math.max(a,Math.min(b,x))
 let audioCtx=null,soundOn=true;
 function sound(type){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const notes={start:[440,660],count:[370],go:[660,880],catch:[640,840],hit:[190,110],power:[440,660,880],over:[390,290,180]};let t=audioCtx.currentTime;for(const f of (notes[type]||[520])){let osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='square';osc.frequency.setValueAtTime(f,t);gain.gain.setValueAtTime(.035,t);gain.gain.exponentialRampToValueAtTime(.001,t+.085);osc.connect(gain);gain.connect(audioCtx.destination);osc.start(t);osc.stop(t+.09);t+=.095}}catch(e){}}
 const bgMusic=new Audio('boria_v5_original.wav');bgMusic.loop=true;bgMusic.volume=.11;bgMusic.preload='auto';let musicOn=true;
-function playMusic(){if(!musicOn||!bgMusic.paused)return;const attempt=bgMusic.play();if(attempt&&attempt.catch)attempt.catch(e=>{console.warn('Background music unavailable:',e.message)});}
+function playMusic(){if(document.hidden||!musicOn||!bgMusic.paused)return;const attempt=bgMusic.play();if(attempt&&attempt.catch)attempt.catch(e=>{console.warn('Background music unavailable:',e.message)});}
 function stopMusic(){bgMusic.pause();bgMusic.currentTime=0;}
+// Mobile Safari: do not keep Boria playing when the game page is backgrounded.
+function pauseBackgroundMusic(){bgMusic.pause();}
+function resumeForegroundMusic(){
+  if(document.visibilityState==='visible'&&musicOn&&(running||starting))playMusic();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)pauseBackgroundMusic();
+  else resumeForegroundMusic();
+});
+window.addEventListener('pagehide',pauseBackgroundMusic);
+window.addEventListener('pageshow',resumeForegroundMusic);
+window.addEventListener('blur',pauseBackgroundMusic);
+window.addEventListener('focus',resumeForegroundMusic);
 $('mute').onclick=()=>{soundOn=!soundOn;$('mute').textContent=soundOn?'SFX ON':'SFX OFF';if(soundOn)sound('start')};
 $('musicToggle').onclick=()=>{musicOn=!musicOn;$('musicToggle').textContent=musicOn?'MUSIC ON':'MUSIC OFF';if(musicOn&&(running||starting))playMusic();else bgMusic.pause()};
 function hud(){ $('score').textContent=score.toLocaleString();$('lives').textContent='♥ '.repeat(lives)+'♡ '.repeat(3-lives);$('difficulty').textContent=difficulty+'/10';$('combo').textContent='COMBO ×'+mult();$('best').textContent='BEST '+best.toLocaleString();$('power').textContent=fireUntil>elapsed?'🍛 AUTO-FIRE '+Math.ceil(fireUntil-elapsed)+'s':'' }
